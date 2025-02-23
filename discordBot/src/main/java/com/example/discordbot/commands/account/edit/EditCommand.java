@@ -7,10 +7,9 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.requests.RestAction;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.sql.SQLException;
 import java.util.Optional;
 
 import static com.example.discordbot.commands.account.add.AddCommand.formatNumber;
@@ -18,56 +17,82 @@ import static com.example.discordbot.commands.account.add.AddCommand.formatNumbe
 @Component
 public class EditCommand extends Command {
 
-
     private final AccountService accountService;
+    @Value("${discord.channel-id}")
+    public String CHANNEL_ID;
 
-    @Autowired
     public EditCommand(AccountService accountService) {
         super("account-edit");
         this.accountService = accountService;
     }
 
     @Override
-    public void handleSlashCommand(SlashCommandInteractionEvent event) throws SQLException {
+    public void handleSlashCommand(SlashCommandInteractionEvent event) {
         if (event.getUser().isBot()) {
             return;
         }
 
-        String command = event.getName();
-
-        if (!command.equals("account-edit")) {
+        Optional<Long> accountIdOpt = getOptionAsLong(event, "id");
+        if (accountIdOpt.isEmpty()) {
+            event.reply("Account ID is required!").setEphemeral(true).queue();
             return;
         }
 
-        Long accountId = event.getOption("id").getAsLong();
-        Optional<Long> newPrice = event.getOption("price") != null ? Optional.of(event.getOption("price").getAsLong()) : Optional.empty();
-        Optional<Integer> newQuantity = event.getOption("quantity") != null ? Optional.of(event.getOption("quantity").getAsInt()) : Optional.empty();
+        Long accountId = accountIdOpt.get();
+        Optional<Account> optionalAccount = this.accountService.findAccountById(accountId);
 
-        Optional<Account> optionalAccount = accountService.findAccountById(accountId);
-
-        if (optionalAccount.isPresent()) {
-            Account account = optionalAccount.get();
-            newPrice.ifPresent(account::setPrice);
-            newQuantity.ifPresent(account::setQuantity);
-            accountService.updateAccount(account);
-
-            if (account.getMessageId() != null) {
-                RestAction<Message> messageAction = event.getGuild().getTextChannelById("1263974502665027738").retrieveMessageById(account.getMessageId());
-                messageAction.queue(
-                        message -> {
-                            EmbedBuilder newEmbed = new EmbedBuilder(message.getEmbeds().get(0));
-                            newEmbed.getFields().clear();
-                            newEmbed.addField("🧙‍♂️ __Price & ID__", "**🆔 " + account.getId() + " - 📈 $" + account.getPrice() + " - 💵 " + formatNumber(account.getPrice() * 6666666) + "**", false);
-                            newEmbed.setTitle("__Account Listing (Quantity " + account.getQuantity() + ")__");
-                            message.editMessageEmbeds(newEmbed.build()).queue();
-                        }
-                );
-                event.reply("**Updated Account id " + account.getId() + "**").queue();
-            } else {
-                event.reply("Message ID not found for this account.").setEphemeral(true).queue();
-            }
-        } else {
+        if (optionalAccount.isEmpty()) {
             event.reply("Account not found!").setEphemeral(true).queue();
+            return;
         }
+
+        Account account = optionalAccount.get();
+        getOptionAsLong(event, "price").ifPresent(account::setPrice);
+        getOptionAsInt(event, "quantity").ifPresent(account::setQuantity);
+        this.accountService.updateAccount(account);
+
+        if (account.getMessageId() != null) {
+            updateMessage(event, account);
+        } else {
+            event.reply("Message ID not found for this account.").setEphemeral(true).queue();
+        }
+    }
+
+    private void updateMessage(SlashCommandInteractionEvent event, Account account) {
+        var channel = event.getGuild().getTextChannelById(CHANNEL_ID);
+        if (channel == null) {
+            event.reply("Channel not found!").setEphemeral(true).queue();
+            return;
+        }
+
+        RestAction<Message> messageAction = channel.retrieveMessageById(account.getMessageId());
+        messageAction.queue(
+                message -> {
+                    EmbedBuilder newEmbed = new EmbedBuilder(message.getEmbeds().get(0));
+                    newEmbed.getFields().clear();
+                    newEmbed.setTitle("__Account Listing (Quantity " + account.getQuantity() + ")__");
+                    newEmbed.addField("🧙‍♂️ __Price & ID__", formatPriceInfo(account), false);
+                    message.editMessageEmbeds(newEmbed.build()).queue();
+                    event.reply("**Updated Account id " + account.getId() + "**").queue();
+                },
+                failure -> event.reply("Failed to update message. It may have been deleted.").setEphemeral(true).queue()
+        );
+    }
+
+    private String formatPriceInfo(Account account) {
+        return String.format("🆔 **%s** - 📈 **$%d** - 💵 **%s**",
+                account.getId(),
+                account.getPrice(),
+                formatNumber(account.getPrice() * 6666666));
+    }
+
+    private Optional<Long> getOptionAsLong(SlashCommandInteractionEvent event, String optionName) {
+        return Optional.ofNullable(event.getOption(optionName))
+                .map(option -> option.getAsLong());
+    }
+
+    private Optional<Integer> getOptionAsInt(SlashCommandInteractionEvent event, String optionName) {
+        return Optional.ofNullable(event.getOption(optionName))
+                .map(option -> option.getAsInt());
     }
 }
