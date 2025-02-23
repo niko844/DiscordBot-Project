@@ -1,22 +1,18 @@
 package com.example.discordbot.commands.account.entities;
 
 import jakarta.persistence.*;
+import lombok.*;
+
+import java.io.Serializable;
 
 @MappedSuperclass
-public abstract class BaseEntity {
-    private Long id;
-
-    protected BaseEntity() {
-    }
+@Getter
+@Setter
+@NoArgsConstructor
+public class BaseEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    public Long getId() {
-        return this.id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
+    private Long id;
 }

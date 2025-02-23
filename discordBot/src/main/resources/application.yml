@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/discordBot?useSSL=false&createDatabaseIfNotExist=true
+    username: root
+    password:
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+logging:
+  level:
+    org: WARN
+    blog: WARN
+    # org.hibernate.SQL: DEBUG
+    # org.hibernate.type.descriptor: TRACE
+
+token: "${DISCORD_TOKEN}"
+bot:
+  image: "https://media.4-paws.org/b/8/d/5/b8d5441fec6b84e9c3cba899549b84bb0f193fff/VIER%20PFOTEN_2019-07-18_013-2890x2000.jpg"
+  link: "https://discord.com/oauth2/authorize?client_id=1087060741242228827&permissions=8&integration_type=0&scope=applications.commands+bot"
+
+items-per-page: 10
+discord:
+  channel-id: "1263974502665027738"

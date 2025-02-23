@@ -3,7 +3,6 @@ package com.example.discordbot.services;
 import com.example.discordbot.commands.account.entities.Account;
 import com.example.discordbot.repositories.AccountRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,19 +19,19 @@ public class AccountService {
         this.accountRepository.save(account);
     }
 
-    public Optional<Account> findAccountById(Long id){
+    public Optional<Account> findAccountById(Long id) {
         return this.accountRepository.findById(id);
     }
 
-    public void updateAccount(Account account){
+    public void updateAccount(Account account) {
         this.accountRepository.save(account);
     }
 
-    public List<Account> findAllAccounts(){
-       return this.accountRepository.findAll();
+    public List<Account> findAllAccounts() {
+        return this.accountRepository.findAll();
     }
 
-    public void removeAccountById(Long id){
+    public void removeAccountById(Long id) {
         this.accountRepository.deleteById(id);
     }
 
